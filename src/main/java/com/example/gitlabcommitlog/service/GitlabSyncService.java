@@ -3,6 +3,8 @@ package com.example.gitlabcommitlog.service;
 import com.example.gitlabcommitlog.model.CommitDaily;
 import com.example.gitlabcommitlog.model.CommitRecord;
 import com.example.gitlabcommitlog.model.ProjectInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -23,6 +25,7 @@ import java.util.regex.Pattern;
 
 @Service
 public class GitlabSyncService {
+    private static final Logger logger = LoggerFactory.getLogger(GitlabSyncService.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private final GitlabClient client;
@@ -43,12 +46,15 @@ public class GitlabSyncService {
         if (token == null || token.isBlank()) {
             return Map.of();
         }
+        String maskedToken = maskToken(token);
         OffsetDateTime since = start.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
         OffsetDateTime until = end.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
 
         Map<LocalDate, Integer> dailyCounts = new HashMap<>();
 
+        logger.info("Start syncing commits, token={}, range={} ~ {}", maskedToken, start, end);
         List<Map<String, Object>> projects = client.fetchAllProjects(token);
+        logger.info("Projects to process: {}", projects.size());
         for (Map<String, Object> project : projects) {
             Long projectId = ((Number) project.get("id")).longValue();
             String fullName = (String) project.get("full_name");
@@ -93,9 +99,11 @@ public class GitlabSyncService {
                     dailyCounts.merge(date, 1, Integer::sum);
                 }
             }
+            logger.info("Finished project: {}, branches={}, unique commits={}", fullName, branches.size(), seenShas.size());
         }
 
         upsertDailyCounts(start, end, dailyCounts, token);
+        logger.info("Sync finished, token={}, total days={}", maskedToken, dailyCounts.size());
         return dailyCounts;
     }
 
@@ -104,7 +112,9 @@ public class GitlabSyncService {
             return false;
         }
         Query query = new Query(Criteria.where("token").is(token));
-        return mongoTemplate.count(query, CommitRecord.class) > 0;
+        boolean exists = mongoTemplate.count(query, CommitRecord.class) > 0;
+        logger.info("Check cached data, token={}, exists={}", maskToken(token), exists);
+        return exists;
     }
 
     public List<CommitDaily> getDailyCounts(LocalDate start, LocalDate end, String token) {
@@ -162,6 +172,8 @@ public class GitlabSyncService {
         response.put("page", safePage);
         response.put("size", safeSize);
         response.put("records", records);
+        logger.info("Commit records query finished, token={}, project={}, branch={}, total={}",
+                maskToken(token), project, branch, total);
         return response;
     }
 
@@ -175,6 +187,7 @@ public class GitlabSyncService {
                 .as(String.class)
                 .all();
         projects.sort(String::compareToIgnoreCase);
+        logger.info("Project list fetched, token={}, count={}", maskToken(token), projects.size());
         return projects;
     }
 
@@ -189,6 +202,8 @@ public class GitlabSyncService {
                 .as(String.class)
                 .all();
         branches.sort(String::compareToIgnoreCase);
+        logger.info("Branch list fetched, token={}, project={}, count={}",
+                maskToken(token), project, branches.size());
         return branches;
     }
 
@@ -294,5 +309,16 @@ public class GitlabSyncService {
     private Pattern buildContainsRegex(String input) {
         String escaped = Pattern.quote(input.trim());
         return Pattern.compile(".*" + escaped + ".*", Pattern.CASE_INSENSITIVE);
+    }
+
+    private String maskToken(String token) {
+        if (token == null || token.isBlank()) {
+            return "empty";
+        }
+        int length = token.length();
+        if (length <= 8) {
+            return "****";
+        }
+        return token.substring(0, 4) + "****" + token.substring(length - 4);
     }
 }

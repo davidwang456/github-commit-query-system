@@ -1,6 +1,8 @@
 package com.example.gitlabcommitlog.service;
 
 import com.example.gitlabcommitlog.config.GithubProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +20,7 @@ import java.util.Map;
 
 @Component
 public class GitlabClient {
+    private static final Logger logger = LoggerFactory.getLogger(GitlabClient.class);
     private static final ParameterizedTypeReference<List<Map<String, Object>>> LIST_MAP_TYPE =
             new ParameterizedTypeReference<>() {};
 
@@ -34,6 +37,7 @@ public class GitlabClient {
         List<Map<String, Object>> results = new ArrayList<>();
         int page = 1;
 
+        logger.info("Start fetching user repositories");
         while (true) {
             URI uri = UriComponentsBuilder.fromHttpUrl(endpoint)
                     .queryParam("visibility", "all")
@@ -51,14 +55,17 @@ public class GitlabClient {
                 break;
             }
             results.addAll(body);
+            logger.info("Fetched repositories page {}, count={}", page, body.size());
             page += 1;
         }
 
+        logger.info("Finished fetching repositories, total={}", results.size());
         return results;
     }
 
     public Map<String, Integer> fetchLanguages(String fullName, String token) {
         String endpoint = properties.getBaseUrl() + "/repos/" + fullName + "/languages";
+        logger.info("Fetching repository languages: {}", fullName);
         ResponseEntity<Map<String, Integer>> response = restTemplate.exchange(
                 endpoint, HttpMethod.GET, new HttpEntity<>(buildHeaders(token)),
                 new ParameterizedTypeReference<>() {});
@@ -70,6 +77,7 @@ public class GitlabClient {
         List<String> results = new ArrayList<>();
         int page = 1;
 
+        logger.info("Start fetching branches: {}", fullName);
         while (true) {
             URI uri = UriComponentsBuilder.fromHttpUrl(endpoint)
                     .queryParam("per_page", 100)
@@ -90,9 +98,11 @@ public class GitlabClient {
                     results.add(name.toString());
                 }
             }
+            logger.info("Fetched branches page {}, count={}", page, body.size());
             page += 1;
         }
 
+        logger.info("Finished fetching branches: {}, total={}", fullName, results.size());
         return results;
     }
 
@@ -102,6 +112,7 @@ public class GitlabClient {
         List<Map<String, Object>> results = new ArrayList<>();
         int page = 1;
 
+        logger.info("Start fetching commits: {}, branch={}", fullName, branch);
         while (true) {
             URI uri = UriComponentsBuilder.fromHttpUrl(endpoint)
                     .queryParam("since", since.toString())
@@ -120,9 +131,11 @@ public class GitlabClient {
                 break;
             }
             results.addAll(body);
+            logger.info("Fetched commits page {}, count={}", page, body.size());
             page += 1;
         }
 
+        logger.info("Finished fetching commits: {}, branch={}, total={}", fullName, branch, results.size());
         return results;
     }
 

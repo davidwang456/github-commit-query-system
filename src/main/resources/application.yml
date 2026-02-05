@@ -8,3 +8,12 @@ spring:
 
 github:
   base-url: https://api.github.com
+
+logging:
+  file:
+    name: logs/app.log
+  level:
+    com.example.gitlabcommitlog: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
