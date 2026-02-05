@@ -8,37 +8,66 @@
         :root {
             --cell-size: 12px;
             --cell-gap: 3px;
-            --level-0: #ebedf0;
-            --level-1: #c6e48b;
-            --level-2: #7bc96f;
-            --level-3: #239a3b;
-            --level-4: #196127;
+            --level-0: #0f172a;
+            --level-1: #0b3b5b;
+            --level-2: #136f8f;
+            --level-3: #22d3ee;
+            --level-4: #7c3aed;
+            --bg: #0b0f1a;
+            --panel: #0f1629;
+            --panel-border: #1f2a44;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-strong: #7dd3fc;
+            --danger: #ef4444;
+        }
+        * {
+            box-sizing: border-box;
         }
         body {
-            font-family: Arial, sans-serif;
-            margin: 24px;
-            color: #333;
+            font-family: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 28px 22px 40px;
+            color: var(--text);
+            background:
+                radial-gradient(1200px 600px at 10% 0%, rgba(56, 189, 248, 0.18), transparent 60%),
+                radial-gradient(900px 500px at 100% 10%, rgba(124, 58, 237, 0.16), transparent 55%),
+                var(--bg);
+        }
+        #app {
+            max-width: 1100px;
+            margin: 0 auto;
         }
         .header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .header h2 {
+            margin: 0;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
         }
         .actions button {
             margin-left: 8px;
-            padding: 6px 10px;
-            border: 1px solid #1a73e8;
-            background: #1a73e8;
-            color: #fff;
+            padding: 8px 14px;
+            border: 1px solid rgba(56, 189, 248, 0.5);
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(124, 58, 237, 0.25));
+            color: var(--text);
             cursor: pointer;
+            border-radius: 8px;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.2);
         }
         .actions button.inactive,
         .actions button:disabled {
-            border-color: #bbb;
-            background: #d9d9d9;
-            color: #666;
+            border-color: rgba(148, 163, 184, 0.3);
+            background: rgba(148, 163, 184, 0.1);
+            color: var(--muted);
             cursor: not-allowed;
+            box-shadow: none;
         }
         .heatmap {
             display: grid;
@@ -49,6 +78,11 @@
         .heatmap-wrapper {
             display: flex;
             justify-content: center;
+            padding: 18px 14px;
+            background: rgba(15, 22, 41, 0.6);
+            border: 1px solid var(--panel-border);
+            border-radius: 14px;
+            box-shadow: 0 16px 40px rgba(2, 6, 23, 0.5);
         }
         .week {
             display: grid;
@@ -58,17 +92,25 @@
         .cell {
             width: var(--cell-size);
             height: var(--cell-size);
-            border-radius: 2px;
+            border-radius: 3px;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.18);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .cell:hover {
+            transform: scale(1.15);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
         }
         .cell.out {
             background: transparent;
+            box-shadow: none;
         }
         .legend {
             display: flex;
             align-items: center;
-            gap: 6px;
-            margin-top: 12px;
+            gap: 8px;
+            margin-top: 14px;
             font-size: 12px;
+            color: var(--muted);
         }
         .legend .cell {
             width: 10px;
@@ -77,29 +119,31 @@
         .status {
             margin-top: 12px;
             font-size: 12px;
-            color: #666;
+            color: var(--muted);
         }
         .activity {
-            margin-top: 10px;
-            padding: 10px 12px;
-            border-radius: 6px;
-            background: #e8f0fe;
-            color: #1a73e8;
+            margin-top: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: var(--accent-strong);
             font-size: 13px;
             font-weight: 600;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
         }
         .progress {
-            margin-top: 6px;
+            margin-top: 8px;
             width: 100%;
             height: 8px;
-            background: #dfe6f3;
+            background: rgba(148, 163, 184, 0.18);
             border-radius: 999px;
             overflow: hidden;
         }
         .progress-bar {
             height: 100%;
             width: 40%;
-            background: #1a73e8;
+            background: linear-gradient(90deg, rgba(56, 189, 248, 0.2), rgba(56, 189, 248, 0.9));
             border-radius: 999px;
             animation: progress-indeterminate 1.2s ease-in-out infinite;
         }
@@ -110,63 +154,89 @@
         }
         .panel {
             margin-top: 28px;
-            padding-top: 16px;
-            border-top: 1px solid #e6e6e6;
+            padding: 20px;
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            background: var(--panel);
+            box-shadow: 0 12px 28px rgba(2, 6, 23, 0.45);
         }
         .panel h3 {
             margin: 0 0 12px;
+            font-size: 18px;
         }
         .token-bar {
             display: flex;
             align-items: center;
             flex-wrap: wrap;
-            gap: 8px;
-            margin: 10px 0 6px;
+            gap: 10px;
+            margin: 14px 0 8px;
         }
         .token-bar input {
-            flex: 0 0 320px;
+            flex: 0 0 340px;
             max-width: 100%;
-            padding: 6px 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            padding: 8px 10px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 8px;
+            background: rgba(15, 23, 42, 0.9);
+            color: var(--text);
+        }
+        .token-bar input:focus {
+            outline: none;
+            border-color: rgba(56, 189, 248, 0.7);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
         }
         .token-bar button {
-            padding: 6px 10px;
-            border: 1px solid #1a73e8;
-            background: #1a73e8;
-            color: #fff;
+            padding: 8px 12px;
+            border: 1px solid rgba(56, 189, 248, 0.5);
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(124, 58, 237, 0.3));
+            color: var(--text);
             cursor: pointer;
+            border-radius: 8px;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .token-bar button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
         }
         .token-bar .ghost {
-            border-color: #ccc;
-            background: #fff;
-            color: #333;
+            border-color: rgba(148, 163, 184, 0.4);
+            background: rgba(148, 163, 184, 0.12);
+            color: var(--text);
         }
         .token-bar button:disabled {
-            border-color: #bbb;
-            background: #d9d9d9;
-            color: #666;
+            border-color: rgba(148, 163, 184, 0.3);
+            background: rgba(148, 163, 184, 0.12);
+            color: var(--muted);
             cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
         }
         .filters {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 10px;
             align-items: center;
             margin-bottom: 12px;
         }
         .filters input,
         .filters select {
-            padding: 6px 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            padding: 7px 10px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 8px;
             min-width: 200px;
+            background: rgba(15, 23, 42, 0.85);
+            color: var(--text);
+        }
+        .filters select:disabled {
+            color: var(--muted);
         }
         .filters button {
-            padding: 6px 12px;
-            border: 1px solid #ccc;
-            background: #fff;
+            padding: 7px 14px;
+            border: 1px solid rgba(56, 189, 248, 0.45);
+            background: rgba(56, 189, 248, 0.18);
+            color: var(--text);
             cursor: pointer;
+            border-radius: 8px;
         }
         .table {
             width: 100%;
@@ -175,35 +245,45 @@
         }
         .table th,
         .table td {
-            border-bottom: 1px solid #eee;
-            padding: 8px 6px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+            padding: 10px 8px;
             text-align: left;
             vertical-align: top;
         }
         .table th {
-            background: #fafafa;
+            background: rgba(15, 23, 42, 0.9);
             font-weight: 600;
+            color: var(--accent-strong);
         }
         .table a {
-            color: #1a73e8;
+            color: var(--accent);
             text-decoration: none;
+        }
+        .table a:hover {
+            text-decoration: underline;
         }
         .pagination {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             margin-top: 12px;
             font-size: 12px;
-            color: #666;
+            color: var(--muted);
         }
         .pagination button {
-            padding: 4px 10px;
-            border: 1px solid #ccc;
-            background: #fff;
+            padding: 6px 12px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--text);
             cursor: pointer;
+            border-radius: 8px;
+        }
+        .pagination button:disabled {
+            color: var(--muted);
+            cursor: not-allowed;
         }
         .muted {
-            color: #888;
+            color: var(--muted);
             font-size: 12px;
         }
     </style>
@@ -490,11 +570,11 @@ createApp({
 </script>
 
 <style>
-    .level-0 { background: var(--level-0); }
-    .level-1 { background: var(--level-1); }
-    .level-2 { background: var(--level-2); }
-    .level-3 { background: var(--level-3); }
-    .level-4 { background: var(--level-4); }
+    .level-0 { background: linear-gradient(135deg, #0f172a, #111827); }
+    .level-1 { background: linear-gradient(135deg, #0b3b5b, #0f4c6d); }
+    .level-2 { background: linear-gradient(135deg, #136f8f, #1aa5b5); }
+    .level-3 { background: linear-gradient(135deg, #22d3ee, #38bdf8); }
+    .level-4 { background: linear-gradient(135deg, #7c3aed, #a855f7); }
 </style>
 </body>
 </html>
