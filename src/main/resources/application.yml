@@ -1,0 +1,10 @@
+server:
+  port: 3000
+
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/gitlab_commit_log?serverSelectionTimeoutMS=10000&connectTimeoutMS=10000&socketTimeoutMS=60000
+
+github:
+  base-url: https://api.github.com

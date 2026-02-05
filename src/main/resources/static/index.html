@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitLab Commit Heatmap</title>
+    <style>
+        :root {
+            --cell-size: 12px;
+            --cell-gap: 3px;
+            --level-0: #ebedf0;
+            --level-1: #c6e48b;
+            --level-2: #7bc96f;
+            --level-3: #239a3b;
+            --level-4: #196127;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 24px;
+            color: #333;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .actions button {
+            margin-left: 8px;
+            padding: 6px 10px;
+            border: 1px solid #1a73e8;
+            background: #1a73e8;
+            color: #fff;
+            cursor: pointer;
+        }
+        .actions button.inactive,
+        .actions button:disabled {
+            border-color: #bbb;
+            background: #d9d9d9;
+            color: #666;
+            cursor: not-allowed;
+        }
+        .heatmap {
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: var(--cell-size);
+            gap: var(--cell-gap);
+        }
+        .heatmap-wrapper {
+            display: flex;
+            justify-content: center;
+        }
+        .week {
+            display: grid;
+            grid-template-rows: repeat(7, var(--cell-size));
+            gap: var(--cell-gap);
+        }
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            border-radius: 2px;
+        }
+        .cell.out {
+            background: transparent;
+        }
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            font-size: 12px;
+        }
+        .legend .cell {
+            width: 10px;
+            height: 10px;
+        }
+        .status {
+            margin-top: 12px;
+            font-size: 12px;
+            color: #666;
+        }
+        .activity {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            background: #e8f0fe;
+            color: #1a73e8;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .progress {
+            margin-top: 6px;
+            width: 100%;
+            height: 8px;
+            background: #dfe6f3;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 40%;
+            background: #1a73e8;
+            border-radius: 999px;
+            animation: progress-indeterminate 1.2s ease-in-out infinite;
+        }
+        @keyframes progress-indeterminate {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(50%); }
+            100% { transform: translateX(200%); }
+        }
+        .panel {
+            margin-top: 28px;
+            padding-top: 16px;
+            border-top: 1px solid #e6e6e6;
+        }
+        .panel h3 {
+            margin: 0 0 12px;
+        }
+        .token-bar {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0 6px;
+        }
+        .token-bar input {
+            flex: 0 0 320px;
+            max-width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .token-bar button {
+            padding: 6px 10px;
+            border: 1px solid #1a73e8;
+            background: #1a73e8;
+            color: #fff;
+            cursor: pointer;
+        }
+        .token-bar .ghost {
+            border-color: #ccc;
+            background: #fff;
+            color: #333;
+        }
+        .token-bar button:disabled {
+            border-color: #bbb;
+            background: #d9d9d9;
+            color: #666;
+            cursor: not-allowed;
+        }
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .filters input,
+        .filters select {
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 200px;
+        }
+        .filters button {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            background: #fff;
+            cursor: pointer;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .table th,
+        .table td {
+            border-bottom: 1px solid #eee;
+            padding: 8px 6px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .table th {
+            background: #fafafa;
+            font-weight: 600;
+        }
+        .table a {
+            color: #1a73e8;
+            text-decoration: none;
+        }
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            font-size: 12px;
+            color: #666;
+        }
+        .pagination button {
+            padding: 4px 10px;
+            border: 1px solid #ccc;
+            background: #fff;
+            cursor: pointer;
+        }
+        .muted {
+            color: #888;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="header">
+        <h2>GitLab Commit Heatmap (Last 12 Months)</h2>
+    </div>
+    <div class="token-bar">
+        <input v-model.trim="accessToken" :type="showToken ? 'text' : 'password'" placeholder="Please input github access token to fetch data" />
+        <button class="ghost" @click="toggleToken">{{ showToken ? 'Hide' : 'Show' }}</button>
+        <button @click="fetchWithToken" :disabled="!accessToken || isSyncing">Fetch</button>
+        <button @click="refresh" :disabled="isRefreshing" :class="{ inactive: isRefreshing }">Refresh</button>
+        <button @click="sync" :disabled="isSyncing" :class="{ inactive: isSyncing }">Sync Latest</button>
+    </div>
+    <div class="heatmap-wrapper">
+        <div class="heatmap">
+            <div class="week" v-for="(week, wIndex) in weeks" :key="wIndex">
+                <div
+                    v-for="(day, dIndex) in week"
+                    :key="dIndex"
+                    class="cell"
+                    :class="[day.inRange ? levelClass(day.count) : 'out']"
+                    :title="day.inRange ? `${day.date} ${day.count} commits` : ''"
+                ></div>
+            </div>
+        </div>
+    </div>
+    <div class="legend">
+        <span>Less</span>
+        <div class="cell" :style="{ background: palette[0] }"></div>
+        <div class="cell" :style="{ background: palette[1] }"></div>
+        <div class="cell" :style="{ background: palette[2] }"></div>
+        <div class="cell" :style="{ background: palette[3] }"></div>
+        <div class="cell" :style="{ background: palette[4] }"></div>
+        <span>More</span>
+    </div>
+    <div class="activity" v-if="activityText">
+        <div>{{ activityText }}</div>
+        <div class="progress">
+            <div class="progress-bar"></div>
+        </div>
+    </div>
+    <div class="status">{{ status }}</div>
+
+    <div class="panel">
+        <h3>Commit History</h3>
+        <div class="filters">
+            <select v-model="filters.project">
+                <option value="">Select project</option>
+                <option v-for="project in projectOptions" :key="project" :value="project">
+                    {{ project }}
+                </option>
+            </select>
+            <select v-model="filters.branch" :disabled="!filters.project">
+                <option value="">Select branch</option>
+                <option v-for="branch in branchOptions" :key="branch" :value="branch">
+                    {{ branch }}
+                </option>
+            </select>
+            <button @click="applyFilters">Search</button>
+        </div>
+        <div class="muted">Source: commit_records</div>
+        <div class="status">{{ commitStatus }}</div>
+        <table class="table" v-if="commitRecords.length">
+            <thead>
+            <tr>
+                <th>Time</th>
+                <th>Author</th>
+                <th>Message</th>
+                <th>SHA</th>
+                <th>Link</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="record in commitRecords" :key="record.id">
+                <td>{{ formatDate(record.committedAt) }}</td>
+                <td>{{ record.author || '-' }}</td>
+                <td>{{ record.message || '-' }}</td>
+                <td>{{ record.sha ? record.sha.slice(0, 8) : '-' }}</td>
+                <td>
+                    <a v-if="record.url" :href="record.url" target="_blank" rel="noopener">Open</a>
+                    <span v-else>-</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="muted" v-else>No data</div>
+        <div class="pagination">
+            <button @click="prevPage" :disabled="commitPage <= 1">Prev</button>
+            <span>Page {{ commitPage }} / {{ totalPages }}, {{ commitTotal }} total</span>
+            <button @click="nextPage" :disabled="commitPage >= totalPages">Next</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+const { createApp } = Vue;
+
+createApp({
+    data() {
+        return {
+            rawData: [],
+            weeks: [],
+            status: 'Not loaded',
+            palette: ['var(--level-0)', 'var(--level-1)', 'var(--level-2)', 'var(--level-3)', 'var(--level-4)'],
+            accessToken: '',
+            showToken: false,
+            filters: {
+                project: '',
+                branch: '',
+            },
+            projectOptions: [],
+            branchOptions: [],
+            commitRecords: [],
+            commitStatus: 'Not loaded',
+            commitPage: 1,
+            commitSize: 20,
+            commitTotal: 0,
+            isRefreshing: false,
+            isSyncing: false,
+        };
+    },
+    computed: {
+        totalPages() {
+            const pages = Math.ceil(this.commitTotal / this.commitSize);
+            return pages > 0 ? pages : 1;
+        },
+        activityText() {
+            if (this.isSyncing) return 'Async in progress';
+            if (this.isRefreshing) return 'Refresh in progress';
+            return '';
+        },
+    },
+    methods: {
+        buildTokenHeaders() {
+            const headers = {};
+            if (this.accessToken) {
+                headers['X-Github-Token'] = this.accessToken;
+            }
+            return headers;
+        },
+        toggleToken() {
+            this.showToken = !this.showToken;
+        },
+        async refresh() {
+            this.isRefreshing = true;
+            this.status = 'Loading...';
+            try {
+                const res = await fetch('/api/heatmap', { headers: this.buildTokenHeaders() });
+                this.rawData = await res.json();
+                this.buildWeeks();
+                this.status = `Loaded ${this.rawData.length} days`;
+            } finally {
+                this.isRefreshing = false;
+            }
+        },
+        async sync() {
+            this.isSyncing = true;
+            this.status = 'Syncing...';
+            try {
+                await fetch('/api/fetch', { headers: this.buildTokenHeaders() });
+                await this.refresh();
+            } finally {
+                this.isSyncing = false;
+            }
+        },
+        async fetchWithToken() {
+            await this.sync();
+            await this.fetchProjects();
+            this.applyFilters();
+        },
+        buildWeeks() {
+            const map = {};
+            for (const item of this.rawData) {
+                map[item.date] = item.count;
+            }
+
+            const today = new Date();
+            const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const start = new Date(end);
+            start.setFullYear(end.getFullYear() - 1);
+            start.setDate(start.getDate() + 1);
+
+            const gridStart = new Date(start);
+            gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+
+            const weeks = [];
+            let cursor = new Date(gridStart);
+
+            while (cursor <= end) {
+                const week = [];
+                for (let i = 0; i < 7; i++) {
+                    const dateStr = cursor.toISOString().slice(0, 10);
+                    const inRange = cursor >= start && cursor <= end;
+                    week.push({
+                        date: dateStr,
+                        count: map[dateStr] || 0,
+                        inRange,
+                    });
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+                weeks.push(week);
+            }
+
+            this.weeks = weeks;
+        },
+        levelClass(count) {
+            if (count <= 0) return 'level-0';
+            if (count <= 2) return 'level-1';
+            if (count <= 5) return 'level-2';
+            if (count <= 9) return 'level-3';
+            return 'level-4';
+        },
+        async fetchProjects() {
+            const res = await fetch('/api/projects', { headers: this.buildTokenHeaders() });
+            this.projectOptions = await res.json();
+        },
+        async fetchBranches() {
+            this.branchOptions = [];
+            this.filters.branch = '';
+            if (!this.filters.project) return;
+            const params = new URLSearchParams();
+            params.set('project', this.filters.project);
+            const res = await fetch(`/api/branches?${params.toString()}`, { headers: this.buildTokenHeaders() });
+            this.branchOptions = await res.json();
+        },
+        async fetchCommits() {
+            this.commitStatus = 'Loading...';
+            const params = new URLSearchParams();
+            if (this.filters.project) params.set('project', this.filters.project);
+            if (this.filters.branch) params.set('branch', this.filters.branch);
+            params.set('page', String(this.commitPage));
+            params.set('size', String(this.commitSize));
+            const res = await fetch(`/api/commits?${params.toString()}`, { headers: this.buildTokenHeaders() });
+            const data = await res.json();
+            this.commitRecords = data.records || [];
+            this.commitTotal = data.total || 0;
+            this.commitStatus = `Loaded ${this.commitRecords.length} records`;
+        },
+        applyFilters() {
+            this.commitPage = 1;
+            this.fetchCommits();
+        },
+        prevPage() {
+            if (this.commitPage > 1) {
+                this.commitPage -= 1;
+                this.fetchCommits();
+            }
+        },
+        nextPage() {
+            if (this.commitPage < this.totalPages) {
+                this.commitPage += 1;
+                this.fetchCommits();
+            }
+        },
+        formatDate(value) {
+            if (!value) return '-';
+            return value.replace('T', ' ').replace('Z', '');
+        },
+    },
+    watch: {
+        'filters.project'() {
+            this.fetchBranches();
+            this.commitPage = 1;
+        },
+        accessToken() {
+            this.rawData = [];
+            this.weeks = [];
+            this.commitRecords = [];
+            this.commitTotal = 0;
+            this.projectOptions = [];
+            this.branchOptions = [];
+        },
+    },
+    mounted() {
+        this.refresh();
+        this.fetchProjects();
+        this.fetchCommits();
+    },
+}).mount('#app');
+</script>
+
+<style>
+    .level-0 { background: var(--level-0); }
+    .level-1 { background: var(--level-1); }
+    .level-2 { background: var(--level-2); }
+    .level-3 { background: var(--level-3); }
+    .level-4 { background: var(--level-4); }
+</style>
+</body>
+</html>
