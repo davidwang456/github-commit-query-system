@@ -33,17 +33,47 @@ public class HeatmapController {
             @RequestParam(value = "token", required = false) String tokenParam) {
         Map<String, Object> response = new HashMap<>();
         String token = resolveToken(tokenHeader, tokenParam);
-        logger.info("Received sync request, token={}", maskToken(token));
+        LocalDate end = LocalDate.now(ZoneId.systemDefault());
+        LocalDate start = end.minusYears(1).plusDays(1);
+
+        logger.info("Fetch request, token={}", maskToken(token));
+
         if (syncService.hasTokenData(token)) {
+            List<CommitDaily> dailyCounts = syncService.getDailyCounts(start, end, token);
             response.put("status", "cached");
-            response.put("days", 0);
-            logger.info("Cache hit, token={}", maskToken(token));
+            response.put("days", dailyCounts.size());
+            response.put("data", dailyCounts);
+            logger.info("Cache hit, token={}, returning commit_daily size={}", maskToken(token), dailyCounts.size());
             return ResponseEntity.ok(response);
         }
-        Map<LocalDate, Integer> data = syncService.syncLastYear(token);
-        response.put("days", data.size());
+
+        syncService.syncLastYear(token);
+        List<CommitDaily> dailyCounts = syncService.getDailyCounts(start, end, token);
+        response.put("days", dailyCounts.size());
         response.put("status", "synced");
-        logger.info("Sync completed, token={}, new days={}", maskToken(token), data.size());
+        response.put("data", dailyCounts);
+        logger.info("Sync completed, token={}, new days={}", maskToken(token), dailyCounts.size());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/sync")
+    public ResponseEntity<Map<String, Object>> syncLatest(
+            @RequestHeader(value = "X-Github-Token", required = false) String tokenHeader,
+            @RequestParam(value = "token", required = false) String tokenParam,
+            @RequestParam(value = "range", defaultValue = "week") String range) {
+        Map<String, Object> response = new HashMap<>();
+        String token = resolveToken(tokenHeader, tokenParam);
+        LocalDate end = LocalDate.now(ZoneId.systemDefault());
+        LocalDate start = end.minusYears(1).plusDays(1);
+
+        logger.info("Sync Latest: token={}, range={} (only this range is synced from GitHub)", maskToken(token), range);
+
+        syncService.syncRecent(token, range);
+        List<CommitDaily> dailyCounts = syncService.getDailyCounts(start, end, token);
+        response.put("days", dailyCounts.size());
+        response.put("status", "synced");
+        response.put("data", dailyCounts);
+        logger.info("Sync Latest done: token={}, range={}, heatmapDays={}", maskToken(token), range, dailyCounts.size());
         return ResponseEntity.ok(response);
     }
 

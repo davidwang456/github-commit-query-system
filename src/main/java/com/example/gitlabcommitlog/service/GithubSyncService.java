@@ -42,6 +42,35 @@ public class GithubSyncService {
         return syncRange(start, end, token);
     }
 
+    /**
+     * Sync commits for a recent range. Supported values: day, 3days, week, month.
+     */
+    public Map<LocalDate, Integer> syncRecent(String token, String range) {
+        if (token == null || token.isBlank() || range == null || range.isBlank()) {
+            return Map.of();
+        }
+        LocalDate end = LocalDate.now(ZoneId.systemDefault());
+        LocalDate start;
+        switch (range.toLowerCase()) {
+            case "day":
+                start = end;
+                break;
+            case "3days":
+                start = end.minusDays(2);
+                break;
+            case "week":
+                start = end.minusDays(6);
+                break;
+            case "month":
+                start = end.minusDays(29);
+                break;
+            default:
+                return syncLastYear(token);
+        }
+        logger.info("Sync recent: range={}, syncDateRange={} ~ {}", range, start, end);
+        return syncRange(start, end, token);
+    }
+
     public Map<LocalDate, Integer> syncRange(LocalDate start, LocalDate end, String token) {
         if (token == null || token.isBlank()) {
             return Map.of();

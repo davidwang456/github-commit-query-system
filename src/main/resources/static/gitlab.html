@@ -69,6 +69,20 @@
             cursor: not-allowed;
             box-shadow: none;
         }
+        .actions a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 8px;
+            padding: 8px 14px;
+            border: 1px solid rgba(56, 189, 248, 0.5);
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(124, 58, 237, 0.25));
+            color: var(--text);
+            text-decoration: none;
+            cursor: pointer;
+            border-radius: 8px;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.2);
+        }
         .heatmap {
             display: grid;
             grid-auto-flow: column;
@@ -292,6 +306,9 @@
 <div id="app">
     <div class="header">
         <h2>GitLab Commit Heatmap (Last 12 Months)</h2>
+        <div class="actions">
+            <a href="/index.html">Go to GitHub</a>
+        </div>
     </div>
     <div class="token-bar">
         <input v-model.trim="accessToken" :type="showToken ? 'text' : 'password'" placeholder="Please input GitLab access token to fetch data" />

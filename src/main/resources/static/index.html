@@ -199,6 +199,14 @@
             border-color: rgba(56, 189, 248, 0.7);
             box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
         }
+        .token-bar .range-select {
+            padding: 8px 10px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 8px;
+            background: rgba(15, 23, 42, 0.9);
+            color: var(--text);
+            cursor: pointer;
+        }
         .token-bar button {
             padding: 8px 12px;
             border: 1px solid rgba(56, 189, 248, 0.5);
@@ -315,6 +323,12 @@
         <button class="ghost" @click="toggleToken">{{ showToken ? 'Hide' : 'Show' }}</button>
         <button @click="fetchWithToken" :disabled="!accessToken || isSyncing">Fetch</button>
         <button @click="refresh" :disabled="isRefreshing" :class="{ inactive: isRefreshing }">Refresh</button>
+        <select v-model="syncRange" class="range-select">
+            <option value="day">Today</option>
+            <option value="3days">Last 3 days</option>
+            <option value="week">Last week</option>
+            <option value="month">Last month</option>
+        </select>
         <button @click="sync" :disabled="isSyncing" :class="{ inactive: isSyncing }">Sync Latest</button>
     </div>
     <div class="heatmap-wrapper">
@@ -424,6 +438,7 @@ createApp({
             commitTotal: 0,
             isRefreshing: false,
             isSyncing: false,
+            syncRange: 'week',
         };
     },
     computed: {
@@ -460,20 +475,39 @@ createApp({
                 this.isRefreshing = false;
             }
         },
+        async applyFetchResponse(json) {
+            if (json.data && Array.isArray(json.data)) {
+                this.rawData = json.data;
+                this.buildWeeks();
+                this.status = `Loaded ${this.rawData.length} days`;
+            } else {
+                await this.refresh();
+            }
+        },
         async sync() {
             this.isSyncing = true;
             this.status = 'Syncing...';
             try {
-                await fetch('/api/fetch', { headers: this.buildTokenHeaders() });
-                await this.refresh();
+                const url = `/api/sync?range=${encodeURIComponent(this.syncRange)}`;
+                const res = await fetch(url, { headers: this.buildTokenHeaders() });
+                const json = await res.json();
+                await this.applyFetchResponse(json);
             } finally {
                 this.isSyncing = false;
             }
         },
         async fetchWithToken() {
-            await this.sync();
-            await this.fetchProjects();
-            this.applyFilters();
+            this.isSyncing = true;
+            this.status = 'Loading...';
+            try {
+                const res = await fetch('/api/fetch', { headers: this.buildTokenHeaders() });
+                const json = await res.json();
+                await this.applyFetchResponse(json);
+                await this.fetchProjects();
+                this.applyFilters();
+            } finally {
+                this.isSyncing = false;
+            }
         },
         buildWeeks() {
             const map = {};
