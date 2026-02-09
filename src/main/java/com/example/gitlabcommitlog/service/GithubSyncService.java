@@ -24,14 +24,14 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 @Service
-public class GitlabSyncService {
-    private static final Logger logger = LoggerFactory.getLogger(GitlabSyncService.class);
+public class GithubSyncService {
+    private static final Logger logger = LoggerFactory.getLogger(GithubSyncService.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
-    private final GitlabClient client;
+    private final GithubClient client;
     private final MongoTemplate mongoTemplate;
 
-    public GitlabSyncService(GitlabClient client, MongoTemplate mongoTemplate) {
+    public GithubSyncService(GithubClient client, MongoTemplate mongoTemplate) {
         this.client = client;
         this.mongoTemplate = mongoTemplate;
     }
@@ -130,7 +130,7 @@ public class GitlabSyncService {
             countMap.put(daily.getDate(), daily.getCount());
         }
 
-        List<CommitDaily> results = new java.util.ArrayList<>();
+        List<CommitDaily> results = new ArrayList<>();
         LocalDate cursor = start;
         while (!cursor.isAfter(end)) {
             String dateStr = cursor.format(DATE_FORMATTER);

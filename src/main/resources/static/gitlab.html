@@ -61,20 +61,6 @@
             border-radius: 8px;
             box-shadow: 0 0 14px rgba(56, 189, 248, 0.2);
         }
-        .actions a {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-left: 8px;
-            padding: 8px 14px;
-            border: 1px solid rgba(56, 189, 248, 0.5);
-            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(124, 58, 237, 0.25));
-            color: var(--text);
-            text-decoration: none;
-            cursor: pointer;
-            border-radius: 8px;
-            box-shadow: 0 0 14px rgba(56, 189, 248, 0.2);
-        }
         .actions button.inactive,
         .actions button:disabled {
             border-color: rgba(148, 163, 184, 0.3);
@@ -306,12 +292,9 @@
 <div id="app">
     <div class="header">
         <h2>GitLab Commit Heatmap (Last 12 Months)</h2>
-        <div class="actions">
-            <a href="/gitlab.html">Go to GitLab</a>
-        </div>
     </div>
     <div class="token-bar">
-        <input v-model.trim="accessToken" :type="showToken ? 'text' : 'password'" placeholder="Please input github access token to fetch data" />
+        <input v-model.trim="accessToken" :type="showToken ? 'text' : 'password'" placeholder="Please input GitLab access token to fetch data" />
         <button class="ghost" @click="toggleToken">{{ showToken ? 'Hide' : 'Show' }}</button>
         <button @click="fetchWithToken" :disabled="!accessToken || isSyncing">Fetch</button>
         <button @click="refresh" :disabled="isRefreshing" :class="{ inactive: isRefreshing }">Refresh</button>
@@ -364,7 +347,7 @@
             </select>
             <button @click="applyFilters">Search</button>
         </div>
-        <div class="muted">Source: commit_records</div>
+        <div class="muted">Source: gitlab_commit_records</div>
         <div class="status">{{ commitStatus }}</div>
         <table class="table" v-if="commitRecords.length">
             <thead>
@@ -441,7 +424,7 @@ createApp({
         buildTokenHeaders() {
             const headers = {};
             if (this.accessToken) {
-                headers['X-Github-Token'] = this.accessToken;
+                headers['X-Gitlab-Token'] = this.accessToken;
             }
             return headers;
         },
@@ -452,7 +435,7 @@ createApp({
             this.isRefreshing = true;
             this.status = 'Loading...';
             try {
-                const res = await fetch('/api/heatmap', { headers: this.buildTokenHeaders() });
+                const res = await fetch('/api/gitlab/heatmap', { headers: this.buildTokenHeaders() });
                 this.rawData = await res.json();
                 this.buildWeeks();
                 this.status = `Loaded ${this.rawData.length} days`;
@@ -464,7 +447,7 @@ createApp({
             this.isSyncing = true;
             this.status = 'Syncing...';
             try {
-                await fetch('/api/fetch', { headers: this.buildTokenHeaders() });
+                await fetch('/api/gitlab/fetch', { headers: this.buildTokenHeaders() });
                 await this.refresh();
             } finally {
                 this.isSyncing = false;
@@ -518,7 +501,7 @@ createApp({
             return 'level-4';
         },
         async fetchProjects() {
-            const res = await fetch('/api/projects', { headers: this.buildTokenHeaders() });
+            const res = await fetch('/api/gitlab/projects', { headers: this.buildTokenHeaders() });
             this.projectOptions = await res.json();
         },
         async fetchBranches() {
@@ -527,7 +510,7 @@ createApp({
             if (!this.filters.project) return;
             const params = new URLSearchParams();
             params.set('project', this.filters.project);
-            const res = await fetch(`/api/branches?${params.toString()}`, { headers: this.buildTokenHeaders() });
+            const res = await fetch(`/api/gitlab/branches?${params.toString()}`, { headers: this.buildTokenHeaders() });
             this.branchOptions = await res.json();
         },
         async fetchCommits() {
@@ -537,7 +520,7 @@ createApp({
             if (this.filters.branch) params.set('branch', this.filters.branch);
             params.set('page', String(this.commitPage));
             params.set('size', String(this.commitSize));
-            const res = await fetch(`/api/commits?${params.toString()}`, { headers: this.buildTokenHeaders() });
+            const res = await fetch(`/api/gitlab/commits?${params.toString()}`, { headers: this.buildTokenHeaders() });
             const data = await res.json();
             this.commitRecords = data.records || [];
             this.commitTotal = data.total || 0;

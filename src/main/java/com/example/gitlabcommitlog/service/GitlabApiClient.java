@@ -1,6 +1,6 @@
 package com.example.gitlabcommitlog.service;
 
-import com.example.gitlabcommitlog.config.GithubProperties;
+import com.example.gitlabcommitlog.config.GitlabProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
@@ -19,29 +19,28 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class GitlabClient {
-    private static final Logger logger = LoggerFactory.getLogger(GitlabClient.class);
+public class GitlabApiClient {
+    private static final Logger logger = LoggerFactory.getLogger(GitlabApiClient.class);
     private static final ParameterizedTypeReference<List<Map<String, Object>>> LIST_MAP_TYPE =
             new ParameterizedTypeReference<>() {};
 
     private final RestTemplate restTemplate;
-    private final GithubProperties properties;
+    private final GitlabProperties properties;
 
-    public GitlabClient(RestTemplate restTemplate, GithubProperties properties) {
+    public GitlabApiClient(RestTemplate restTemplate, GitlabProperties properties) {
         this.restTemplate = restTemplate;
         this.properties = properties;
     }
 
     public List<Map<String, Object>> fetchAllProjects(String token) {
-        String endpoint = properties.getBaseUrl() + "/user/repos";
+        String endpoint = properties.getBaseUrl() + "/projects";
         List<Map<String, Object>> results = new ArrayList<>();
         int page = 1;
 
-        logger.info("Start fetching user repositories");
+        logger.info("Start fetching GitLab projects");
         while (true) {
             URI uri = UriComponentsBuilder.fromHttpUrl(endpoint)
-                    .queryParam("visibility", "all")
-                    .queryParam("affiliation", "owner,collaborator,organization_member")
+                    .queryParam("membership", true)
                     .queryParam("per_page", 100)
                     .queryParam("page", page)
                     .build()
@@ -55,29 +54,29 @@ public class GitlabClient {
                 break;
             }
             results.addAll(body);
-            logger.info("Fetched repositories page {}, count={}", page, body.size());
+            logger.info("Fetched GitLab projects page {}, count={}", page, body.size());
             page += 1;
         }
 
-        logger.info("Finished fetching repositories, total={}", results.size());
+        logger.info("Finished fetching GitLab projects, total={}", results.size());
         return results;
     }
 
-    public Map<String, Integer> fetchLanguages(String fullName, String token) {
-        String endpoint = properties.getBaseUrl() + "/repos/" + fullName + "/languages";
-        logger.info("Fetching repository languages: {}", fullName);
-        ResponseEntity<Map<String, Integer>> response = restTemplate.exchange(
+    public Map<String, Double> fetchLanguages(long projectId, String token) {
+        String endpoint = properties.getBaseUrl() + "/projects/" + projectId + "/languages";
+        logger.info("Fetching GitLab project languages: {}", projectId);
+        ResponseEntity<Map<String, Double>> response = restTemplate.exchange(
                 endpoint, HttpMethod.GET, new HttpEntity<>(buildHeaders(token)),
                 new ParameterizedTypeReference<>() {});
         return response.getBody();
     }
 
-    public List<String> fetchBranches(String fullName, String token) {
-        String endpoint = properties.getBaseUrl() + "/repos/" + fullName + "/branches";
+    public List<String> fetchBranches(long projectId, String token) {
+        String endpoint = properties.getBaseUrl() + "/projects/" + projectId + "/repository/branches";
         List<String> results = new ArrayList<>();
         int page = 1;
 
-        logger.info("Start fetching branches: {}", fullName);
+        logger.info("Start fetching GitLab branches: {}", projectId);
         while (true) {
             URI uri = UriComponentsBuilder.fromHttpUrl(endpoint)
                     .queryParam("per_page", 100)
@@ -98,26 +97,26 @@ public class GitlabClient {
                     results.add(name.toString());
                 }
             }
-            logger.info("Fetched branches page {}, count={}", page, body.size());
+            logger.info("Fetched GitLab branches page {}, count={}", page, body.size());
             page += 1;
         }
 
-        logger.info("Finished fetching branches: {}, total={}", fullName, results.size());
+        logger.info("Finished fetching GitLab branches: {}, total={}", projectId, results.size());
         return results;
     }
 
-    public List<Map<String, Object>> fetchCommits(String fullName, String branch, OffsetDateTime since, OffsetDateTime until,
-                                                  String token) {
-        String endpoint = properties.getBaseUrl() + "/repos/" + fullName + "/commits";
+    public List<Map<String, Object>> fetchCommits(long projectId, String branch, OffsetDateTime since,
+                                                  OffsetDateTime until, String token) {
+        String endpoint = properties.getBaseUrl() + "/projects/" + projectId + "/repository/commits";
         List<Map<String, Object>> results = new ArrayList<>();
         int page = 1;
 
-        logger.info("Start fetching commits: {}, branch={}", fullName, branch);
+        logger.info("Start fetching GitLab commits: {}, branch={}", projectId, branch);
         while (true) {
             URI uri = UriComponentsBuilder.fromHttpUrl(endpoint)
                     .queryParam("since", since.toString())
                     .queryParam("until", until.toString())
-                    .queryParam("sha", branch)
+                    .queryParam("ref_name", branch)
                     .queryParam("per_page", 100)
                     .queryParam("page", page)
                     .build()
@@ -131,18 +130,18 @@ public class GitlabClient {
                 break;
             }
             results.addAll(body);
-            logger.info("Fetched commits page {}, count={}", page, body.size());
+            logger.info("Fetched GitLab commits page {}, count={}", page, body.size());
             page += 1;
         }
 
-        logger.info("Finished fetching commits: {}, branch={}, total={}", fullName, branch, results.size());
+        logger.info("Finished fetching GitLab commits: {}, branch={}, total={}", projectId, branch, results.size());
         return results;
     }
 
     private HttpHeaders buildHeaders(String token) {
         HttpHeaders headers = new HttpHeaders();
         if (token != null && !token.isBlank()) {
-            headers.set("Authorization", "token " + token);
+            headers.set("Private-Token", token);
         }
         return headers;
     }
